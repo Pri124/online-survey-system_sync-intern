@@ -1,0 +1,121 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+
+public class SurveyApp extends JFrame {
+    private JTextField emailField;
+    private JTextArea feedbackArea;
+
+    private Connection connection;
+    private PreparedStatement insertStatement;
+
+    public SurveyApp() {
+        setTitle("Survey App");
+        setSize(700, 800);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        JPanel panel = new JPanel(new GridLayout(3, 2));
+        JLabel emailLabel = new JLabel("Email:");
+        JLabel feedbackLabel = new JLabel("Feedback:");
+        emailField = new JTextField();
+        feedbackArea = new JTextArea();
+        JButton submitButton = new JButton("Submit");
+        JButton exitButton = new JButton("Exit");
+
+        submitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                submitFeedback();
+            }
+        });
+
+        exitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                closeConnection();
+                System.exit(0);
+            }
+        });
+
+        panel.add(emailLabel);
+        panel.add(emailField);
+        panel.add(feedbackLabel);
+        panel.add(new JScrollPane(feedbackArea));
+        panel.add(submitButton);
+        panel.add(exitButton);
+
+        add(panel);
+        setVisible(true);
+
+        initializeDatabase();
+    }
+
+    private void initializeDatabase() {
+        try {
+
+            String url = "jdbc:mysql://localhost:3306/survey_db";
+            String username = "root";
+            String password = "Priya@123";
+            connection = DriverManager.getConnection(url, username, password);
+
+
+            String insertQuery = "INSERT INTO feedback (email, feedback) VALUES (?, ?)";
+            insertStatement = connection.prepareStatement(insertQuery);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to connect to the database.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void submitFeedback() {
+        String email = emailField.getText();
+        String feedback = feedbackArea.getText();
+
+        if (email.isEmpty() || feedback.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // Insert the feedback into the database
+            insertStatement.setString(1, email);
+            insertStatement.setString(2, feedback);
+            insertStatement.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Thank you for your feedback!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Clear input fields
+            emailField.setText("");
+            feedbackArea.setText("");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to submit feedback.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void closeConnection() {
+        try {
+            if (insertStatement != null)
+                insertStatement.close();
+            if (connection != null)
+                connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new SurveyApp();
+            }
+        });
+    }
+}
